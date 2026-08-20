@@ -35,27 +35,29 @@ async function startServer() {
             { name: 'ATERNOS_SERVER', value: CONFIG.serverCookie, domain: '.aternos.org' }
         );
 
-        console.log('[AUTO-START] Aternos open ho raha hai...');
-        await page.goto('https://aternos.org/servers/', { waitUntil: 'networkidle2', timeout: 60000 });
+        console.log('[AUTO-START] Aternos direct server page open kar rahe hain...');
+        await page.goto('https://aternos.org/server/', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        // Check if server list is shown
-        await new Promise(r => setTimeout(r, 4000));
-        const currentUrl = page.url();
+        let currentUrl = page.url();
         console.log('[INFO] Current URL:', currentUrl);
 
-        // Agar servers list page par hai toh Notzz_aahil server choose karo
-        if (currentUrl.includes('/servers/')) {
-            console.log('[AUTO-START] Servers list detected. Clicking on target server...');
-            const serverCard = await page.$('.server-body');
-            if (serverCard) {
-                await serverCard.click();
-                await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-            }
+        // Agar servers list page par redirect ho gaya, toh targeted card click karo
+        if (currentUrl.includes('/servers')) {
+            console.log('[AUTO-START] Clicking Notzz_aahil server card...');
+            await page.evaluate(() => {
+                const cards = Array.from(document.querySelectorAll('.server-body, .server'));
+                for (const card of cards) {
+                    if (card.innerText.includes('Notzz_aahil') || card.innerText.includes('OsNGHYUoKJu8co6g')) {
+                        card.click();
+                        break;
+                    }
+                }
+            });
+            await new Promise(r => setTimeout(r, 6000));
         }
 
-        // Wait for Start Button
         console.log('[AUTO-START] Start button check kar rahe hain...');
-        await page.waitForSelector('#start', { visible: true, timeout: 25000 });
+        await page.waitForSelector('#start', { visible: true, timeout: 30000 });
 
         const startBtn = await page.$('#start');
         if (startBtn) {
@@ -70,7 +72,7 @@ async function startServer() {
                     console.log('[SUCCESS] Queue confirm ho gaya!');
                 }
             } catch (e) {
-                console.log('[INFO] Queue confirmation skip (not needed).');
+                console.log('[INFO] Queue confirm nahi chahiye tha.');
             }
         }
     } catch (error) {
@@ -94,5 +96,3 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     startServer();
 });
-
-
