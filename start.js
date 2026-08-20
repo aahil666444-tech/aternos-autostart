@@ -1,4 +1,3 @@
-
 const express = require('express');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -21,16 +20,14 @@ async function startServer() {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--window-size=1280,800'
         ]
     });
 
     try {
         const page = await browser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36');
 
         await page.setCookie(
@@ -38,11 +35,27 @@ async function startServer() {
             { name: 'ATERNOS_SERVER', value: CONFIG.serverCookie, domain: '.aternos.org' }
         );
 
-        console.log('[AUTO-START] Aternos server page open kar rahe hain...');
-        await page.goto('https://aternos.org/server/', { waitUntil: 'networkidle2', timeout: 60000 });
+        console.log('[AUTO-START] Aternos open ho raha hai...');
+        await page.goto('https://aternos.org/servers/', { waitUntil: 'networkidle2', timeout: 60000 });
 
-        console.log('[AUTO-START] Start button ka wait kar rahe hain...');
-        await page.waitForSelector('#start', { visible: true, timeout: 20000 });
+        // Check if server list is shown
+        await new Promise(r => setTimeout(r, 4000));
+        const currentUrl = page.url();
+        console.log('[INFO] Current URL:', currentUrl);
+
+        // Agar servers list page par hai toh Notzz_aahil server choose karo
+        if (currentUrl.includes('/servers/')) {
+            console.log('[AUTO-START] Servers list detected. Clicking on target server...');
+            const serverCard = await page.$('.server-body');
+            if (serverCard) {
+                await serverCard.click();
+                await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+            }
+        }
+
+        // Wait for Start Button
+        console.log('[AUTO-START] Start button check kar rahe hain...');
+        await page.waitForSelector('#start', { visible: true, timeout: 25000 });
 
         const startBtn = await page.$('#start');
         if (startBtn) {
@@ -57,7 +70,7 @@ async function startServer() {
                     console.log('[SUCCESS] Queue confirm ho gaya!');
                 }
             } catch (e) {
-                console.log('[INFO] Koi queue nahi thi.');
+                console.log('[INFO] Queue confirmation skip (not needed).');
             }
         }
     } catch (error) {
@@ -81,3 +94,5 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     startServer();
 });
+
+
