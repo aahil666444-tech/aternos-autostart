@@ -1,9 +1,11 @@
-name: Start Minecraft Server
+name: Aternos Auto Restarter
 on:
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 jobs:
-  start:
+  check-and-start:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -17,6 +19,5 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Run Starter
+      - name: Run Auto Watcher
         run: node start.js
-        
