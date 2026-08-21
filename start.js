@@ -1,19 +1,28 @@
-const express = require('express');
+const util = require('minecraft-server-util');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
 puppeteer.use(StealthPlugin());
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const SERVER_IP = 'Notzz_aahil.aternos.me';
+const SERVER_PORT = 25565; // Java ke liye 25565 (Bedrock ke liye 19132)
 
 const CONFIG = {
     sessionCookie: 'uN7TSSB0to8h7eSoZ5ekTgtB3A1Va4fssSdjaKszNo59G1293euJPtlCH6DuY2DTmdpJYiM8Oa9GxeALss6ppH2ue2wFXaAWlyCw',
     serverCookie: 'OsNGHYUoKJu8co6g'
 };
 
-async function startServer() {
-    console.log('[AUTO-START] Browser open ho raha hai...');
+async function checkAndStart() {
+    console.log(`[CHECK] Checking server status for ${SERVER_IP}...`);
+    
+    try {
+        const response = await util.status(SERVER_IP, SERVER_PORT, { timeout: 5000 });
+        console.log(`[ONLINE] Server pehle se chal raha hai! Players: ${response.players.online}/${response.players.max}`);
+        process.exit(0);
+    } catch (err) {
+        console.log('[OFFLINE] Server offline hai! Starting browser to launch server...');
+    }
+
     const browser = await puppeteer.launch({
         headless: true,
         args: [
@@ -35,15 +44,12 @@ async function startServer() {
             { name: 'ATERNOS_SERVER', value: CONFIG.serverCookie, domain: '.aternos.org' }
         );
 
-        console.log('[AUTO-START] Aternos direct server page open kar rahe hain...');
+        console.log('[AUTO-START] Aternos open ho raha hai...');
         await page.goto('https://aternos.org/server/', { waitUntil: 'networkidle2', timeout: 60000 });
 
         let currentUrl = page.url();
-        console.log('[INFO] Current URL:', currentUrl);
-
-        // Agar servers list page par redirect ho gaya, toh targeted card click karo
         if (currentUrl.includes('/servers')) {
-            console.log('[AUTO-START] Clicking Notzz_aahil server card...');
+            console.log('[AUTO-START] Server card click kar rahe hain...');
             await page.evaluate(() => {
                 const cards = Array.from(document.querySelectorAll('.server-body, .server'));
                 for (const card of cards) {
@@ -72,7 +78,7 @@ async function startServer() {
                     console.log('[SUCCESS] Queue confirm ho gaya!');
                 }
             } catch (e) {
-                console.log('[INFO] Queue confirm nahi chahiye tha.');
+                console.log('[INFO] Koi queue nahi thi.');
             }
         }
     } catch (error) {
@@ -83,16 +89,4 @@ async function startServer() {
     }
 }
 
-app.get('/', (req, res) => {
-    res.send('Aternos Bot is Running!');
-});
-
-app.get('/start', async (req, res) => {
-    startServer();
-    res.send('Starting server triggered...');
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    startServer();
-});
+checkAndStart();
